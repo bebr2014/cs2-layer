@@ -1,0 +1,253 @@
+import hashlib
+import time
+import httpx
+from app.config import settings
+
+SELLER_API_URL = "https://ggsel.net/api_sellers/api"
+SELLER_OFFICE_URL = "https://ggsel.net/api_seller_office/v1"
+
+
+class GgselSellerAPIClient:
+    """Публичный Seller API v1 — bulk price update, purchase info, chat."""
+
+    def __init__(self):
+        self._token: str | None = None
+
+    async def _get_token(self) -> str:
+        # TODO: брать из БД через GgselToken, пока получаем свежий
+        ts = int(time.time())
+        sign = hashlib.sha256(
+            f"{settings.ggsel_api_key}{ts}".encode()
+        ).hexdigest()
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_API_URL}/apilogin",
+                json={
+                    "seller_id": settings.ggsel_seller_id,
+                    "timestamp": ts,
+                    "sign": sign,
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._token = data["token"]
+            return self._token
+
+    async def update_prices(self, items: list[dict]) -> dict:
+        """
+        POST /product/edit/prices — bulk price update.
+        items = [{"product_id": ..., "price": ...}, ...]
+        """
+        token = await self._get_token()
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{SELLER_API_URL}/product/edit/prices",
+                params={"token": token},
+                json=items,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def get_task_status(self, task_id: str) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{SELLER_API_URL}/product/edit/UpdateProductsTaskStatus",
+                params={"token": token, "taskId": task_id},
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def get_last_sales(self, top: int = 100) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{SELLER_API_URL}/seller-last-sales",
+                params={"token": token, "top": top},
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def send_chat(self, order_id: int, message: str) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_API_URL}/debates/v2",
+                params={"token": token, "id_i": order_id},
+                json={"message": message},
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+
+class GgselSellerOfficeClient:
+    """Seller Office API — создание офферов, управление, доставка."""
+
+    def __init__(self):
+        self._access_token: str | None = None
+
+    async def _get_token(self) -> str:
+        # TODO: брать из БД + refresh. Пока получаем свежий.
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/oauth/token",
+                json={
+                    "grant_type": "password",
+                    "username": settings.ggsel_so_username,
+                    "password": settings.ggsel_so_password,
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._access_token = data["access_token"]
+            return self._access_token
+
+    def _headers(self, token: str) -> dict:
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "locale": "ru",
+        }
+
+    async def create_draft(self, title_ru: str, title_en: str,
+                           description_ru: str, description_en: str,
+                           category_id: int, cover_base64: str) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=15) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/offers/draft",
+                json={"offer": {
+                    "title_ru": title_ru,
+                    "title_en": title_en,
+                    "description_ru": description_ru,
+                    "description_en": description_en,
+                    "category_id": category_id,
+                    "autoselling": False,
+                    "cover_image_attributes": {
+                        "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
+                    }
+                }}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def update_price(self, offer_id: int, price: float) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.patch(
+                f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_price",
+                json={"offer": {"price": price, "unlimited_quantity": True}}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def create_option(self, offer_id: int) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/offers/{offer_id}/options",
+                json={"option": {
+                    "title_ru": "Ваш Steam Trade URL",
+                    "title_en": "Your Steam Trade URL",
+                    "comment_ru": "Ссылка вида https://steamcommunity.com/tradeoffer/new/?partner=...&token=...",
+                    "required": True,
+                    "kind": "text",
+                    "position": 1,
+                }}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def set_delivery_kind(self, offer_id: int) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.put(
+                f"{SELLER_OFFICE_URL}/offers/{offer_id}",
+                json={"offer": {"delivery_kind": "manual"}}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def set_precheck(self, offer_id: int, option_id: int) -> dict:
+        token = await self._get_token()
+        url = f"https://our.host/hooks/ggsel/precheck/{offer_id}?secret={settings.webhook_shared_secret}"
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.put(
+                f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_precheck_settings",
+                json={"offer": {
+                    "enabled": True,
+                    "url": url,
+                    "allow_payment": False,
+                    "show_option_ids": [option_id],
+                }}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def set_notification(self, offer_id: int) -> dict:
+        token = await self._get_token()
+        url = f"https://our.host/hooks/ggsel/notification/{offer_id}?secret={settings.webhook_shared_secret}"
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.patch(
+                f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_notification",
+                json={"notification": {
+                    "kind": "url",
+                    "url": url,
+                    "method": "post",
+                    "default": False,
+                    "disabled": False,
+                }}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def activate_offer(self, offer_id: int) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/offers/{offer_id}/activate"
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def pause_offers(self, offer_ids: list[int]) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/offers/batch/actions/pause",
+                json={"offer_ids": offer_ids}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def activate_offers(self, offer_ids: list[int]) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/offers/batch/actions/activate",
+                json={"offer_ids": offer_ids}
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def mark_delivered(self, order_id: int) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/orders/{order_id}/delivered"
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def get_order(self, order_id: int) -> dict:
+        token = await self._get_token()
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+            resp = await client.get(
+                f"{SELLER_OFFICE_URL}/orders/{order_id}"
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+
+ggsel_seller = GgselSellerAPIClient()
+ggsel_office = GgselSellerOfficeClient()
