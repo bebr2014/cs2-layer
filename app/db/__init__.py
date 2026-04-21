@@ -2,13 +2,12 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import create_engine
 from app.config import settings
 
-# Async engine — для приложения
-async_url = settings.database_url  # postgresql+asyncpg://...
+# Гарантируем правильные драйверы
+async_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://").replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+sync_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace("postgresql://", "postgresql+psycopg2://")
+
 engine = create_async_engine(async_url, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
-
-# Sync engine — для Alembic
-sync_url = settings.database_url.replace("+asyncpg", "+psycopg2")
 sync_engine = create_engine(sync_url, echo=False)
 
 async def get_db():
