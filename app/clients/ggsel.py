@@ -3,8 +3,8 @@ import time
 import httpx
 from app.config import settings
 
-SELLER_API_URL = "https://ggsel.net/api_sellers/api"
-SELLER_OFFICE_URL = "https://ggsel.net/api_seller_office/v1"
+SELLER_API_URL = "https://seller.ggsel.com/api_sellers/api"
+SELLER_OFFICE_URL = "https://seller.ggsel.com/api_seller_office/v1"
 
 
 class GgselSellerAPIClient:
@@ -14,7 +14,6 @@ class GgselSellerAPIClient:
         self._token: str | None = None
 
     async def _get_token(self) -> str:
-        # TODO: брать из БД через GgselToken, пока получаем свежий
         ts = int(time.time())
         sign = hashlib.sha256(
             f"{settings.ggsel_api_key}{ts}".encode()
@@ -23,7 +22,7 @@ class GgselSellerAPIClient:
             resp = await client.post(
                 f"{SELLER_API_URL}/apilogin",
                 json={
-                    "seller_id": settings.ggsel_seller_id,
+                    "seller_id": int(settings.ggsel_seller_id),
                     "timestamp": ts,
                     "sign": sign,
                 }
@@ -34,10 +33,6 @@ class GgselSellerAPIClient:
             return self._token
 
     async def update_prices(self, items: list[dict]) -> dict:
-        """
-        POST /product/edit/prices — bulk price update.
-        items = [{"product_id": ..., "price": ...}, ...]
-        """
         token = await self._get_token()
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
@@ -87,20 +82,7 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        # TODO: брать из БД + refresh. Пока получаем свежий.
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"{SELLER_OFFICE_URL}/oauth/token",
-                json={
-                    "grant_type": "password",
-                    "username": settings.ggsel_so_username,
-                    "password": settings.ggsel_so_password,
-                }
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            self._access_token = data["access_token"]
-            return self._access_token
+        return await ggsel_seller._get_token()
 
     def _headers(self, token: str) -> dict:
         return {
