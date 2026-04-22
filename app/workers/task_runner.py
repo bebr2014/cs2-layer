@@ -34,8 +34,8 @@ async def handle_task(task: Task) -> None:
             await create_offer(payload["offer_id"])
 
         case TaskKind.DELIVER:
-            # TODO: await deliver_order(payload["order_id"])
-            pass
+            from app.workers.deliver import deliver_order
+            await deliver_order(payload["order_id"])
 
         case TaskKind.MONITOR_DELIVERY:
             # TODO: await monitor_delivery(payload["order_id"])
