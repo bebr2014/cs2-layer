@@ -7,17 +7,19 @@ from app.db.models import Offer, OfferStatus, Task, TaskKind
 
 
 async def xpanda_sync():
-    """
-    Каждые 10 мин — синхронизация цен и остатков с xPanda.
-    TODO: заменить заглушку на реальный вызов xpanda.get_prices()
-    """
     print(f"[Scheduler] xpanda_sync started at {datetime.utcnow()}")
+
+    try:
+        from app.fx import get_usd_rub
+        fx_rate = await get_usd_rub()
+        print(f"[Scheduler] FX rate: {fx_rate}")
+    except Exception as e:
+        print(f"[Scheduler] FX rate failed: {e}")
+        return
 
     # TODO: раскомментировать когда будут credentials xPanda
     # from app.clients.xpanda import xpanda
     # snapshot = await xpanda.get_prices()
-
-    # Заглушка — пропускаем до получения xPanda credentials
     print("[Scheduler] xpanda_sync: xPanda client not configured yet, skipping")
 
 
