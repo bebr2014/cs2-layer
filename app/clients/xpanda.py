@@ -4,13 +4,13 @@ import httpx
 from app.config import settings
 
 
-BASE_URL = "https://xpanda.gg/v1"  # уточнить реальный URL
+BASE_URL = "https://p2p.xpanda.pro/api"  # уточнить реальный URL
 
 
 class XPandaClient:
     def __init__(self):
         self.headers = {
-            "Authorization": f"Token {settings.xpanda_api_key}",
+            "Authorization": settings.xpanda_api_key,
             "Content-Type": "application/json",
         }
 

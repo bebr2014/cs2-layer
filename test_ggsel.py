@@ -1,8 +1,9 @@
 import asyncio
-from app.fx import get_usd_rub
+import httpx
 
 async def main():
-    rate = await get_usd_rub()
-    print(f"USD/RUB = {rate}")
+    async with httpx.AsyncClient() as client:
+        resp = await client.get("https://api.ipify.org?format=json")
+        print("Our IP:", resp.json()["ip"])
 
 asyncio.run(main())
