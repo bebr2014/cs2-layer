@@ -24,14 +24,10 @@ async def xpanda_sync():
 
 
 async def reconcile():
-    """Каждый час — сверка заказов с ggsel."""
     print(f"[Scheduler] reconcile started at {datetime.utcnow()}")
+    from app.workers.reconciler import reconcile as do_reconcile
+    await do_reconcile()
 
-    # TODO:
-    # from app.clients.ggsel import ggsel_seller
-    # sales = await ggsel_seller.get_last_sales(top=100)
-    # for sale in sales: ...
-    print("[Scheduler] reconcile: not implemented yet")
 
 
 async def trade_protection():

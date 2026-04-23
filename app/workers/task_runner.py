@@ -32,7 +32,8 @@ async def handle_task(task) -> None:
         case TaskKind.DELIVER:
             await deliver_order(payload["order_id"])
         case TaskKind.MONITOR_DELIVERY:
-            pass
+            from app.workers.monitor_delivery import monitor_delivery
+            await monitor_delivery(payload["order_id"])
         case TaskKind.MARK_DELIVERED:
             from app.workers.mark_delivered import mark_delivered
             await mark_delivered(payload["order_id"])
@@ -41,7 +42,8 @@ async def handle_task(task) -> None:
         case TaskKind.TOGGLE_STATUS_BATCH:
             pass
         case TaskKind.TRADE_WATCH:
-            pass
+            from app.workers.trade_watch import trade_watch
+            await trade_watch(payload["order_id"])
         case _:
             raise ValueError(f"Unknown task kind: {task.kind}")
 
