@@ -4,5 +4,3 @@ builder = "nixpacks"
 [deploy]
 startCommand = "alembic upgrade head && python main.py"
 restartPolicyType = "on_failure"
-healthcheckPath = "/"
-healthcheckTimeout = 60
