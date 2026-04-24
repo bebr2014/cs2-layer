@@ -124,6 +124,7 @@ class GgselSellerOfficeClient:
                     }
                 }}
             )
+            print(f"[CREATE_DRAFT] status={resp.status_code} body={resp.text[:500]}")
             resp.raise_for_status()
             return resp.json()
 
