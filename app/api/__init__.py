@@ -23,3 +23,11 @@ async def test_xpanda():
             headers={"Authorization": settings.xpanda_api_key}
         )
         return {"status": resp.status_code, "body": resp.json()}
+@app.get("/test-ggsel-office")
+async def test_ggsel_office():
+    from app.clients.ggsel import ggsel_office
+    try:
+        token = await ggsel_office._get_token()
+        return {"token": token[:30] + "..."}
+    except Exception as e:
+        return {"error": str(e)}

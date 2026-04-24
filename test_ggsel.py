@@ -1,13 +1,8 @@
 import asyncio
-import httpx
-from app.config import settings
+from app.clients.ggsel import ggsel_office
 
 async def main():
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(
-            "https://p2p.xpanda.pro/api/v1/balance/",
-            headers={"Authorization": settings.xpanda_api_key}
-        )
-        print(resp.status_code, resp.text)
+    token = await ggsel_office._get_token()
+    print(f"Office Token: {token[:30]}...")
 
 asyncio.run(main())

@@ -82,7 +82,20 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        return await ggsel_seller._get_token()
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_OFFICE_URL}/oauth/token",
+                headers={"locale": "ru"},
+                json={
+                    "grant_type": "password",
+                    "email": settings.ggsel_so_username,
+                    "password": settings.ggsel_so_password,
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._access_token = data["access_token"]
+            return self._access_token
 
     def _headers(self, token: str) -> dict:
         return {
@@ -152,7 +165,7 @@ class GgselSellerOfficeClient:
 
     async def set_precheck(self, offer_id: int, option_id: int) -> dict:
         token = await self._get_token()
-        url = f"https://our.host/hooks/ggsel/precheck/{offer_id}?secret={settings.webhook_shared_secret}"
+        url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/{offer_id}?secret={settings.webhook_shared_secret}"
         async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
             resp = await client.put(
                 f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_precheck_settings",
@@ -168,7 +181,7 @@ class GgselSellerOfficeClient:
 
     async def set_notification(self, offer_id: int) -> dict:
         token = await self._get_token()
-        url = f"https://our.host/hooks/ggsel/notification/{offer_id}?secret={settings.webhook_shared_secret}"
+        url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/notification/{offer_id}?secret={settings.webhook_shared_secret}"
         async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
             resp = await client.patch(
                 f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_notification",
@@ -216,14 +229,15 @@ class GgselSellerOfficeClient:
         token = await self._get_token()
         async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
             resp = await client.post(
-                f"{SELLER_OFFICE_URL}/orders/{order_id}/delivered"
+                f"{SELLER_OFFICE_URL}/orders/{order_id}/deliveries/delivered"
             )
             resp.raise_for_status()
             return resp.json()
 
     async def get_order(self, order_id: int) -> dict:
         token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+        headers = {**self._headers(token), "currency": "RUB"}
+        async with httpx.AsyncClient(headers=headers, timeout=10) as client:
             resp = await client.get(
                 f"{SELLER_OFFICE_URL}/orders/{order_id}"
             )
