@@ -121,9 +121,7 @@ class GgselSellerOfficeClient:
                     "autoselling": False,
                     "delivery_kind": "manual",
                     "check_unique_code_url": None,
-                    "cover_image_attributes": {
-                        "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
-                    }
+
                 }}
             )
             print(f"[CREATE_DRAFT] status={resp.status_code} body={resp.text[:500]}")
