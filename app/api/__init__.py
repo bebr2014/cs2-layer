@@ -36,9 +36,10 @@ async def test_ggsel_urls():
     import httpx
     from app.config import settings
     urls = [
+        "https://ggsel.net/api_seller_office/v1/oauth/token",
+        "https://seller.ggsel.net/api_seller_office/v1/oauth/token",
+        "https://office.ggsel.net/api_seller_office/v1/oauth/token",
         "https://seller.ggsel.com/api_seller_office/v1/oauth/token",
-        "https://ggsel.com/api_seller_office/v1/oauth/token",
-        "https://api.ggsel.com/api_seller_office/v1/oauth/token",
     ]
     results = {}
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
