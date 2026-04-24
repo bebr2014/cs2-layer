@@ -54,3 +54,20 @@ async def test_ggsel_urls():
             except Exception as e:
                 results[url] = str(e)
     return results
+@app.get("/reset-task")
+async def reset_task():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Task, TaskStatus
+    from sqlalchemy import select
+    from datetime import datetime
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Task).where(Task.id == 1))
+        task = result.scalar_one_or_none()
+        if task:
+            task.status = TaskStatus.pending
+            task.attempts = 0
+            task.last_error = None
+            task.scheduled_at = datetime.utcnow()
+            await db.commit()
+            return {"status": "reset"}
+        return {"status": "not found"}

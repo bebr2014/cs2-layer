@@ -119,6 +119,8 @@ class GgselSellerOfficeClient:
                     "description_en": description_en,
                     "category_id": category_id,
                     "autoselling": False,
+                    "delivery_kind": "manual",
+                    "check_unique_code_url": None,
                     "cover_image_attributes": {
                         "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
                     }
