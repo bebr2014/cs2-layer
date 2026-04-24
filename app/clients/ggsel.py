@@ -14,23 +14,22 @@ class GgselSellerAPIClient:
         self._token: str | None = None
 
     async def _get_token(self) -> str:
-        ts = int(time.time())
-        sign = hashlib.sha256(
-            f"{settings.ggsel_api_key}{ts}".encode()
-        ).hexdigest()
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
-                f"{SELLER_API_URL}/apilogin",
+                "https://seller.ggsel.com/api/auth/login",
+                headers={"locale": "ru"},
                 json={
-                    "seller_id": int(settings.ggsel_seller_id),
-                    "timestamp": ts,
-                    "sign": sign,
+                    "email": settings.ggsel_so_username,
+                    "password": settings.ggsel_so_password,
                 }
             )
             resp.raise_for_status()
-            data = resp.json()
-            self._token = data["token"]
-            return self._token
+            # Токен приходит в cookie ACCESS_TOKEN
+            token = resp.cookies.get("ACCESS_TOKEN")
+            if not token:
+                raise ValueError("No ACCESS_TOKEN in cookies")
+            self._access_token = token
+            return token
 
     async def update_prices(self, items: list[dict]) -> dict:
         token = await self._get_token()
