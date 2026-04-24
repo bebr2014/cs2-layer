@@ -4,7 +4,7 @@ import httpx
 from app.config import settings
 
 SELLER_API_URL = "https://seller.ggsel.com/api_sellers/api"
-SELLER_OFFICE_URL = "https://ggsel.com/api_seller_office/v1"
+SELLER_OFFICE_URL = "https://ggsel.net/api_seller_office/v1"
 
 
 class GgselSellerAPIClient:
