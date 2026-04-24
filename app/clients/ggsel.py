@@ -14,22 +14,23 @@ class GgselSellerAPIClient:
         self._token: str | None = None
 
     async def _get_token(self) -> str:
+        ts = int(time.time())
+        sign = hashlib.sha256(
+            f"{settings.ggsel_api_key}{ts}".encode()
+        ).hexdigest()
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
-                "https://seller.ggsel.com/api/auth/login",
-                headers={"locale": "ru"},
+                f"{SELLER_API_URL}/apilogin",
                 json={
-                    "email": settings.ggsel_so_username,
-                    "password": settings.ggsel_so_password,
+                    "seller_id": int(settings.ggsel_seller_id),
+                    "timestamp": ts,
+                    "sign": sign,
                 }
             )
             resp.raise_for_status()
-            # Токен приходит в cookie ACCESS_TOKEN
-            token = resp.cookies.get("ACCESS_TOKEN")
-            if not token:
-                raise ValueError("No ACCESS_TOKEN in cookies")
-            self._access_token = token
-            return token
+            data = resp.json()
+            self._token = data["token"]
+            return self._token
 
     async def update_prices(self, items: list[dict]) -> dict:
         token = await self._get_token()
@@ -83,18 +84,19 @@ class GgselSellerOfficeClient:
     async def _get_token(self) -> str:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
-                f"{SELLER_OFFICE_URL}/oauth/token",
+                "https://seller.ggsel.com/api/auth/login",
                 headers={"locale": "ru"},
                 json={
-                    "grant_type": "password",
                     "email": settings.ggsel_so_username,
                     "password": settings.ggsel_so_password,
                 }
             )
             resp.raise_for_status()
-            data = resp.json()
-            self._access_token = data["access_token"]
-            return self._access_token
+            token = resp.cookies.get("ACCESS_TOKEN")
+            if not token:
+                raise ValueError("No ACCESS_TOKEN in cookies")
+            self._access_token = token
+            return token
 
     def _headers(self, token: str) -> dict:
         return {
