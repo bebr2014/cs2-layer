@@ -17,10 +17,13 @@ async def xpanda_sync():
         print(f"[Scheduler] FX rate failed: {e}")
         return
 
-    # TODO: раскомментировать когда будут credentials xPanda
-    # from app.clients.xpanda import xpanda
-    # snapshot = await xpanda.get_prices()
-    print("[Scheduler] xpanda_sync: xPanda client not configured yet, skipping")
+    from app.clients.xpanda import xpanda
+    try:
+        snapshot = await xpanda.get_prices()
+        items = snapshot.get("items", [])
+        print(f"[Scheduler] Got {len(items)} items from xPanda")
+    except Exception as e:
+        print(f"[Scheduler] xPanda prices failed: {e}")
 
 
 async def reconcile():
