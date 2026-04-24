@@ -31,3 +31,25 @@ async def test_ggsel_office():
         return {"token": token[:30] + "..."}
     except Exception as e:
         return {"error": str(e)}
+@app.get("/test-ggsel-urls")
+async def test_ggsel_urls():
+    import httpx
+    from app.config import settings
+    urls = [
+        "https://seller.ggsel.com/api_seller_office/v1/oauth/token",
+        "https://ggsel.com/api_seller_office/v1/oauth/token",
+        "https://api.ggsel.com/api_seller_office/v1/oauth/token",
+    ]
+    results = {}
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        for url in urls:
+            try:
+                resp = await client.post(
+                    url,
+                    headers={"locale": "ru"},
+                    json={"grant_type": "password", "email": settings.ggsel_so_username, "password": settings.ggsel_so_password}
+                )
+                results[url] = {"status": resp.status_code, "body": resp.text[:100]}
+            except Exception as e:
+                results[url] = str(e)
+    return results
