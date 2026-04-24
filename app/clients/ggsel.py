@@ -100,9 +100,9 @@ class GgselSellerOfficeClient:
 
     def _headers(self, token: str) -> dict:
         return {
-            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "locale": "ru",
+            "Cookie": f"ACCESS_TOKEN={token}",
         }
 
     async def create_draft(self, title_ru: str, title_en: str,
