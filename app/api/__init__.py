@@ -77,6 +77,7 @@ async def test_alert():
     from app.alerts import critical
     await critical("Test alert from cs2-layer!")
     return {"status": "sent"}
+
 @app.get("/test-categories")
 async def test_categories():
     from app.clients.ggsel import ggsel_office
@@ -84,8 +85,8 @@ async def test_categories():
     token = await ggsel_office._get_token()
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(
-            "https://seller.ggsel.com/api/v1/categories/search",
+            "https://seller.ggsel.com/api/v1/categories",
             headers={"locale": "ru", "Cookie": f"ACCESS_TOKEN={token}"},
-            params={"q": "CS2"}
+            params={"limit": 100}
         )
         return {"status": resp.status_code, "body": resp.json()}
