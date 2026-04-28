@@ -119,7 +119,7 @@ class GgselSellerOfficeClient:
                     "description_en": description_en,
                     "category_id": category_id,
                     "autoselling": False,
-                    "delivery_kind": "manual",
+                    "delivery_kind": "auto",
                     "check_unique_code_url": None,
 
                 }}
