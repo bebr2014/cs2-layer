@@ -130,7 +130,7 @@ class GgselSellerOfficeClient:
 
     async def update_price(self, offer_id: int, price: float) -> dict:
         token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=30) as client:
             resp = await client.patch(
                 f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_price",
                 json={"offer": {"price": price, "unlimited_quantity": True}}

@@ -33,7 +33,7 @@ class XPandaClient:
             params = {}
             if names:
                 params = [("names[]", n) for n in names]
-            resp = await client.get(f"{BASE_URL}/items/prices/", params=params)
+            resp = await client.get(f"{BASE_URL}/v1/items/prices/", params=params)
             resp.raise_for_status()
             return resp.json()
 
