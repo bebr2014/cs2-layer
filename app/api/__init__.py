@@ -71,3 +71,9 @@ async def reset_task():
             await db.commit()
             return {"status": "reset"}
         return {"status": "not found"}
+
+@app.get("/test-alert")
+async def test_alert():
+    from app.alerts import critical
+    await critical("Test alert from cs2-layer!")
+    return {"status": "sent"}
