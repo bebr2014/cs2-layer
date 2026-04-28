@@ -87,6 +87,9 @@ async def test_categories():
         resp = await client.get(
             "https://seller.ggsel.com/api/v1/categories",
             headers={"locale": "ru", "Cookie": f"ACCESS_TOKEN={token}"},
-            params={"limit": 100}
+            params={"parent_id": 5, "limit": 100}
         )
-        return {"status": resp.status_code, "body": resp.json()}
+        data = resp.json()
+        # Ищем CS2
+        cs2 = [c for c in data.get("data", []) if "CS" in c.get("title", "") or "Counter" in c.get("title", "")]
+        return {"cs2_categories": cs2, "all": data}
