@@ -8,13 +8,13 @@ from app.db.models import Offer, OfferStatus, Task, TaskKind
 
 async def xpanda_sync():
     print(f"[Scheduler] xpanda_sync started at {datetime.utcnow()}")
-
     try:
         from app.fx import get_usd_rub
         fx_rate = await get_usd_rub()
         print(f"[Scheduler] FX rate: {fx_rate}")
     except Exception as e:
-        print(f"[Scheduler] FX rate failed: {e}")
+        from app.alerts import warn
+        await warn(f"fx_rate_stale: {e}")
         return
 
     from app.clients.xpanda import xpanda
@@ -23,14 +23,24 @@ async def xpanda_sync():
         items = snapshot.get("items", [])
         print(f"[Scheduler] Got {len(items)} items from xPanda")
     except Exception as e:
-        print(f"[Scheduler] xPanda prices failed: {e}")
-
+        from app.alerts import warn
+        await warn(f"xpanda_sync_failed: {e}")
 
 async def reconcile():
     print(f"[Scheduler] reconcile started at {datetime.utcnow()}")
     from app.workers.reconciler import reconcile as do_reconcile
     await do_reconcile()
 
+async def token_refresh():
+    print(f"[Scheduler] token_refresh started at {datetime.utcnow()}")
+    try:
+        from app.clients.ggsel import ggsel_seller, ggsel_office
+        await ggsel_seller._get_token()
+        await ggsel_office._get_token()
+        print("[Scheduler] token_refresh: OK")
+    except Exception as e:
+        from app.alerts import critical
+        await critical(f"token_refresh_failed: {e}")
 
 
 async def trade_protection():
