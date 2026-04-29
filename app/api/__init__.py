@@ -100,3 +100,19 @@ async def debug_offer():
         if row:
             return dict(row._mapping)
         return {"error": "not found"}
+
+@app.get("/test-bearer")
+async def test_bearer():
+    import httpx
+    from app.config import settings
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            "https://seller.ggsel.com/api_seller_office/v1/oauth/token",
+            headers={"locale": "ru"},
+            json={
+                "grant_type": "password",
+                "email": settings.ggsel_so_username,
+                "password": settings.ggsel_so_password,
+            }
+        )
+        return {"status": resp.status_code, "body": resp.text[:300]}
