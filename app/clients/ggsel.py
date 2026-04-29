@@ -77,12 +77,12 @@ class GgselSellerAPIClient:
 
 class GgselSellerOfficeClient:
     """Seller Office API — создание офферов, управление, доставка."""
-    SELLER_OFFICE_URL = "https://ggsel.com/api_seller_office/v1"
+    SELLER_OFFICE_URL = "https://ggsel.net/api_seller_office/v1"
     def __init__(self):
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
                 f"{self.SELLER_OFFICE_URL}/oauth/token",
                 headers={"locale": "ru"},
