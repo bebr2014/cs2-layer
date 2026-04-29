@@ -87,6 +87,6 @@ async def test_categories():
         resp = await client.get(
             "https://seller.ggsel.com/api/v1/categories",
             headers={"locale": "ru", "Cookie": f"ACCESS_TOKEN={token}"},
-            params={"parent_id": 147, "limit": 100}
+            params={"parent_id": 16674, "limit": 100}
         )
         return resp.json()
