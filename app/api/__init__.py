@@ -90,3 +90,21 @@ async def test_categories():
             params={"parent_id": 16674, "limit": 100}
         )
         return resp.json()
+
+@app.get("/debug-offer")
+async def debug_offer():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Offer
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Offer).where(Offer.id == 1))
+        offer = result.scalar_one_or_none()
+        if offer:
+            return {
+                "id": offer.id,
+                "market_hash_name": offer.market_hash_name,
+                "ggsel_price_rub": offer.ggsel_price_rub,
+                "xpanda_item_id": offer.xpanda_item_id,
+                "status": str(offer.status),
+            }
+        return {"error": "not found"}
