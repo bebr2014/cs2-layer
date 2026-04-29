@@ -82,7 +82,7 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             resp = await client.post(
                 f"{self.SELLER_OFFICE_URL}/oauth/token",
                 headers={"locale": "ru"},
