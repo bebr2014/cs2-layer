@@ -109,16 +109,9 @@ class GgselSellerOfficeClient:
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
         token = await self._get_token()
-        async with httpx.AsyncClient(timeout=30, cookies=self._cookies) as client:
+        async with httpx.AsyncClient(headers=self._headers(token), timeout=30) as client:
             resp = await client.post(
                 f"{SELLER_OFFICE_URL}/offers/draft",
-                headers={
-                    "Content-Type": "application/json",
-                    "locale": "ru",
-                    "Origin": "https://seller.ggsel.com",
-                    "Referer": "https://seller.ggsel.com/",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                },
                 json={"offer": {
                     "title_ru": title_ru,
                     "title_en": title_en,
