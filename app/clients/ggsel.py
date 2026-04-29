@@ -103,7 +103,7 @@ class GgselSellerOfficeClient:
         return {
             "Content-Type": "application/json",
             "locale": "ru",
-            "Cookie": f"ACCESS_TOKEN={token}",
+            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
