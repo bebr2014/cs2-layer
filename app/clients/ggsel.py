@@ -14,18 +14,6 @@ class GgselSellerAPIClient:
         self._token: str | None = None
 
     async def _get_token(self) -> str:
-        return settings.ggsel_access_token
-
-    def _headers(self, token: str) -> dict:
-        return {
-            "Content-Type": "application/json",
-            "locale": "ru",
-            "Origin": "https://seller.ggsel.com",
-            "Referer": "https://seller.ggsel.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={settings.ggsel_qrator}",
-        }
-    async def _get_token(self) -> str:
         ts = int(time.time())
         sign = hashlib.sha256(
             f"{settings.ggsel_api_key}{ts}".encode()
@@ -89,7 +77,7 @@ class GgselSellerAPIClient:
 
 class GgselSellerOfficeClient:
     """Seller Office API — создание офферов, управление, доставка."""
-    SELLER_OFFICE_URL = "https://ggsel.net/api_seller_office/v1"
+
     def __init__(self):
         self._access_token: str | None = None
 
@@ -251,5 +239,3 @@ class GgselSellerOfficeClient:
 
 ggsel_seller = GgselSellerAPIClient()
 ggsel_office = GgselSellerOfficeClient()
-
-
