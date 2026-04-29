@@ -82,21 +82,28 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            # Сначала открываем страницу чтобы получить qrator cookie
+            await client.get(
+                "https://seller.ggsel.com/",
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            )
+            # Потом логинимся
             resp = await client.post(
-                f"{self.SELLER_OFFICE_URL}/oauth/token",
-                headers={"locale": "ru"},
+                "https://seller.ggsel.com/api/auth/login",
+                headers={"locale": "ru", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
                 json={
-                    "grant_type": "password",
                     "email": settings.ggsel_so_username,
                     "password": settings.ggsel_so_password,
                 }
             )
-            print(f"[TOKEN] status={resp.status_code} body={resp.text[:200]}")
             resp.raise_for_status()
-            data = resp.json()
-            self._access_token = data["access_token"]
-            return self._access_token
+            token = resp.cookies.get("ACCESS_TOKEN")
+            if not token:
+                raise ValueError("No ACCESS_TOKEN in cookies")
+            self._access_token = token
+            self._cookies = dict(client.cookies)
+            return token
 
     def _headers(self, token: str) -> dict:
         return {
@@ -107,9 +114,16 @@ class GgselSellerOfficeClient:
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
         token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, cookies=self._cookies) as client:
             resp = await client.post(
-                f"{self.SELLER_OFFICE_URL}/offers/draft",
+                f"{SELLER_OFFICE_URL}/offers/draft",
+                headers={
+                    "Content-Type": "application/json",
+                    "locale": "ru",
+                    "Origin": "https://seller.ggsel.com",
+                    "Referer": "https://seller.ggsel.com/",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                },
                 json={"offer": {
                     "title_ru": title_ru,
                     "title_en": title_en,
