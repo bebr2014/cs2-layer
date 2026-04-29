@@ -14,23 +14,18 @@ class GgselSellerAPIClient:
         self._token: str | None = None
 
     async def _get_token(self) -> str:
-        ts = int(time.time())
-        sign = hashlib.sha256(
-            f"{settings.ggsel_api_key}{ts}".encode()
-        ).hexdigest()
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"{SELLER_API_URL}/apilogin",
-                json={
-                    "seller_id": int(settings.ggsel_seller_id),
-                    "timestamp": ts,
-                    "sign": sign,
-                }
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            self._token = data["token"]
-            return self._token
+        return settings.ggsel_access_token
+
+    def _headers(self, token: str) -> dict:
+        return {
+            "Content-Type": "application/json",
+            "locale": "ru",
+            "Origin": "https://seller.ggsel.com",
+            "Referer": "https://seller.ggsel.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={settings.ggsel_qrator}",
+        }
+
 
     async def update_prices(self, items: list[dict]) -> dict:
         token = await self._get_token()
