@@ -36,43 +36,8 @@ def build_titles(market_hash_name: str) -> tuple[str, str]:
 
 
 def build_description(market_hash_name: str) -> tuple[str, str]:
-    wear_en = parse_wear(market_hash_name) or ""
-    wear_ru = WEAR_RU.get(wear_en, "")
+    return "CS2 skin", "CS2 skin"
 
-    # Детектируем спецпрефиксы
-    prefix = ""
-    if "★" in market_hash_name:
-        prefix = "Нож / Перчатки"
-    elif "StatTrak™" in market_hash_name:
-        prefix = "StatTrak™ — счётчик убийств"
-    elif "Souvenir" in market_hash_name:
-        prefix = "Сувенирный предмет"
-
-    desc_ru = f"""CS2 скин | {market_hash_name}
-{f"Тип: {prefix}" if prefix else ""}
-Wear: {wear_en} {f"({wear_ru})" if wear_ru else ""}
-
-Предмет передаётся через Steam трейд на ваш Steam аккаунт.
-Автоматическая выдача после оплаты.
-
-Как получить Trade URL:
-1. Steam → Инвентарь → Обмен
-2. Скопируйте ссылку на обмен
-3. Вставьте её в поле "Ваш Steam Trade URL" перед оплатой""".strip()
-
-    desc_en = f"""CS2 skin | {market_hash_name}
-{f"Type: {prefix}" if prefix else ""}
-Wear: {wear_en}
-
-Item is delivered via Steam trade to your Steam account.
-Automatic delivery after payment.
-
-How to get Trade URL:
-1. Steam → Inventory → Trade Offers → Privacy
-2. Copy your trade offer URL
-3. Paste it into "Your Steam Trade URL" field before payment""".strip()
-
-    return desc_ru, desc_en
 
 
 async def create_offer(offer_id: int) -> None:

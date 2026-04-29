@@ -82,7 +82,7 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
                 "https://seller.ggsel.com/api/auth/login",
                 headers={"locale": "ru"},
@@ -96,6 +96,7 @@ class GgselSellerOfficeClient:
             if not token:
                 raise ValueError("No ACCESS_TOKEN in cookies")
             self._access_token = token
+            self._cookies = dict(resp.cookies)
             return token
 
     def _headers(self, token: str) -> dict:
@@ -105,13 +106,12 @@ class GgselSellerOfficeClient:
             "Cookie": f"ACCESS_TOKEN={token}",
         }
 
-    async def create_draft(self, title_ru: str, title_en: str,
-                           description_ru: str, description_en: str,
-                           category_id: int, cover_base64: str) -> dict:
+    async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
         token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=15) as client:
+        async with httpx.AsyncClient(timeout=30, cookies=self._cookies) as client:
             resp = await client.post(
                 f"{SELLER_OFFICE_URL}/offers/draft",
+                headers={"locale": "ru", "Content-Type": "application/json"},
                 json={"offer": {
                     "title_ru": title_ru,
                     "title_en": title_en,
@@ -121,7 +121,9 @@ class GgselSellerOfficeClient:
                     "autoselling": False,
                     "delivery_kind": "auto",
                     "check_unique_code_url": None,
-
+                    "cover_image_attributes": {
+                        "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
+                    }
                 }}
             )
             print(f"[CREATE_DRAFT] status={resp.status_code} body={resp.text[:500]}")
