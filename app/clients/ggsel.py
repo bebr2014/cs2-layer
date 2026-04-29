@@ -104,6 +104,8 @@ class GgselSellerOfficeClient:
             "Content-Type": "application/json",
             "locale": "ru",
             "Cookie": f"ACCESS_TOKEN={token}; user-role=seller",
+            "Origin": "https://seller.ggsel.com",
+            "Referer": "https://seller.ggsel.com/offers/create",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
