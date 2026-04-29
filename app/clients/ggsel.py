@@ -77,42 +77,39 @@ class GgselSellerAPIClient:
 
 class GgselSellerOfficeClient:
     """Seller Office API — создание офферов, управление, доставка."""
-
+    SELLER_OFFICE_URL = "https://ggsel.com/api_seller_office/v1"
     def __init__(self):
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                "https://seller.ggsel.com/api/auth/login",
+                f"{self.SELLER_OFFICE_URL}/oauth/token",
                 headers={"locale": "ru"},
                 json={
+                    "grant_type": "password",
                     "email": settings.ggsel_so_username,
                     "password": settings.ggsel_so_password,
                 }
             )
+            print(f"[TOKEN] status={resp.status_code} body={resp.text[:200]}")
             resp.raise_for_status()
-            token = resp.cookies.get("ACCESS_TOKEN")
-            if not token:
-                raise ValueError("No ACCESS_TOKEN in cookies")
-            self._access_token = token
-            self._cookies = dict(resp.cookies)
-            return token
+            data = resp.json()
+            self._access_token = data["access_token"]
+            return self._access_token
 
     def _headers(self, token: str) -> dict:
         return {
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "locale": "ru",
-            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller",
-            "Origin": "https://seller.ggsel.com",
-            "Referer": "https://seller.ggsel.com/offers/create",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
         token = await self._get_token()
         async with httpx.AsyncClient(timeout=30, cookies=self._cookies) as client:
             resp = await client.post(
-                f"{SELLER_OFFICE_URL}/offers/draft",
+                f"{self.SELLER_OFFICE_URL}/offers/draft",
                 headers={"locale": "ru", "Content-Type": "application/json"},
                 json={"offer": {
                     "title_ru": title_ru,
