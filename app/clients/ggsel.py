@@ -25,7 +25,24 @@ class GgselSellerAPIClient:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={settings.ggsel_qrator}",
         }
-
+    async def _get_token(self) -> str:
+        ts = int(time.time())
+        sign = hashlib.sha256(
+            f"{settings.ggsel_api_key}{ts}".encode()
+        ).hexdigest()
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{SELLER_API_URL}/apilogin",
+                json={
+                    "seller_id": int(settings.ggsel_seller_id),
+                    "timestamp": ts,
+                    "sign": sign,
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._token = data["token"]
+            return self._token
 
     async def update_prices(self, items: list[dict]) -> dict:
         token = await self._get_token()
@@ -77,34 +94,17 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            # Сначала открываем страницу чтобы получить qrator cookie
-            await client.get(
-                "https://seller.ggsel.com/",
-                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-            )
-            # Потом логинимся
-            resp = await client.post(
-                "https://seller.ggsel.com/api/auth/login",
-                headers={"locale": "ru", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
-                json={
-                    "email": settings.ggsel_so_username,
-                    "password": settings.ggsel_so_password,
-                }
-            )
-            resp.raise_for_status()
-            token = resp.cookies.get("ACCESS_TOKEN")
-            if not token:
-                raise ValueError("No ACCESS_TOKEN in cookies")
-            self._access_token = token
-            self._cookies = dict(client.cookies)
-            return token
+        self._access_token = settings.ggsel_access_token
+        return self._access_token
 
     def _headers(self, token: str) -> dict:
         return {
-            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "locale": "ru",
+            "Origin": "https://seller.ggsel.com",
+            "Referer": "https://seller.ggsel.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={settings.ggsel_qrator}",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):

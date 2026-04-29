@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     markup: float = 1.20
     min_price_rub: float = 100.0
     cs2_category_id: int = 0
+    ggsel_access_token: str = ""
+    ggsel_qrator: str = ""
 
     class Config:
         env_file = ".env"
