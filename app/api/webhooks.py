@@ -152,15 +152,3 @@ async def notification(offer_id: int, request: Request, secret: str = ""):
         await db.commit()
 
     return {"status": "ok"}
-@app.get("/test-precheck")
-async def test_precheck():
-    import httpx
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/1?secret={settings.webhook_shared_secret}",
-            json={
-                "product": {"cnt": 1},
-                "options": [{"type": "text", "value": "https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=abcd1234"}]
-            }
-        )
-        return resp.json()
