@@ -18,6 +18,7 @@ async def xpanda_sync():
         return
 
     from app.clients.xpanda import xpanda
+    from app.config import settings
     try:
         snapshot = await xpanda.get_prices()
         items = snapshot.get("items", [])
@@ -25,6 +26,44 @@ async def xpanda_sync():
     except Exception as e:
         from app.alerts import warn
         await warn(f"xpanda_sync_failed: {e}")
+        return
+
+    async with AsyncSessionLocal() as db:
+        updated = 0
+        created = 0
+        for item in items:
+            name = item.get("market_hash_name") or item.get("name")
+            price_usd = item.get("price")
+            qty = item.get("quantity", 1)
+            if not name or not price_usd:
+                continue
+
+            price_rub = round(float(price_usd) * fx_rate * settings.markup, 2)
+            if price_rub < settings.min_price_rub:
+                continue
+
+            result = await db.execute(select(Offer).where(Offer.market_hash_name == name))
+            offer = result.scalar_one_or_none()
+
+            if offer:
+                offer.xpanda_price_usd = price_usd
+                offer.ggsel_price_rub = price_rub
+                offer.xpanda_qty = qty
+                offer.last_synced_at = datetime.utcnow()
+                updated += 1
+            else:
+                offer = Offer(
+                    market_hash_name=name,
+                    xpanda_price_usd=price_usd,
+                    ggsel_price_rub=price_rub,
+                    xpanda_qty=qty,
+                    last_synced_at=datetime.utcnow(),
+                )
+                db.add(offer)
+                created += 1
+
+        await db.commit()
+        print(f"[Scheduler] xpanda_sync done: {created} created, {updated} updated")
 
 async def reconcile():
     print(f"[Scheduler] reconcile started at {datetime.utcnow()}")
@@ -50,13 +89,6 @@ async def trade_protection():
     # TODO: проверить orders где delivery_status='done' и delivered_at < 7 дней
     print("[Scheduler] trade_protection: not implemented yet")
 
-
-async def token_refresh():
-    """Каждые 20 мин — обновление токенов ggsel."""
-    print(f"[Scheduler] token_refresh started at {datetime.utcnow()}")
-
-    # TODO: обновить токены через GgselToken в БД
-    print("[Scheduler] token_refresh: not implemented yet")
 
 
 def start_scheduler() -> AsyncIOScheduler:

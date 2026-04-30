@@ -57,10 +57,14 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
     if not match:
         return {"error": "Неверный формат Steam Trade URL"}
 
-    # Проверить qty у xPanda (заглушка до получения xPanda credentials)
-    # TODO: заменить на реальный вызов xpanda.get_prices([offer.market_hash_name])
-    # if xpanda_qty == 0:
-    #     return {"error": "Товар временно недоступен"}
+    # Проверить qty у xPanda
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Offer).where(Offer.market_hash_name == offer.market_hash_name)
+        )
+        offer_db = result.scalar_one_or_none()
+        if offer_db and offer_db.xpanda_qty == 0:
+            return {"error": "Товар временно недоступен"}
 
     return {"error": None}
 
@@ -148,3 +152,15 @@ async def notification(offer_id: int, request: Request, secret: str = ""):
         await db.commit()
 
     return {"status": "ok"}
+@app.get("/test-precheck")
+async def test_precheck():
+    import httpx
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/1?secret={settings.webhook_shared_secret}",
+            json={
+                "product": {"cnt": 1},
+                "options": [{"type": "text", "value": "https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=abcd1234"}]
+            }
+        )
+        return resp.json()
