@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.webhooks import router
+from app.config import settings
 
 app = FastAPI(title="cs2-layer")
 app.include_router(router)
