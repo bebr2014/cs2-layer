@@ -82,8 +82,7 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-    from playwright.async_api import async_playwright
-    from playwright_stealth import stealth_async
+    from playwright_stealth import Stealth
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -91,7 +90,7 @@ class GgselSellerOfficeClient:
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
-        await stealth_async(page)
+        await Stealth().apply_stealth_async(page)
         
         await page.goto("https://seller.ggsel.com/")
         await page.wait_for_timeout(2000)
