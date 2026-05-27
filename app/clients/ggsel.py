@@ -82,43 +82,43 @@ class GgselSellerOfficeClient:
         self._access_token: str | None = None
 
     async def _get_token(self) -> str:
-    from playwright_stealth import Stealth
-    from playwright.async_api import async_playwright
-    
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        )
-        page = await context.new_page()
-        await Stealth().apply_stealth_async(page)
+        from playwright_stealth import Stealth
+        from playwright.async_api import async_playwright
         
-        await page.goto("https://seller.ggsel.com/")
-        await page.wait_for_timeout(2000)
-        
-        await page.evaluate(f"""
-            await fetch('/api/auth/login', {{
-                method: 'POST',
-                headers: {{'Content-Type': 'application/json', 'locale': 'ru'}},
-                body: JSON.stringify({{email: '{settings.ggsel_so_username}', password: '{settings.ggsel_so_password}'}})
-            }})
-        """)
-        await page.wait_for_timeout(2000)
-        
-        cookies = await context.cookies()
-        cookie_dict = {c['name']: c['value'] for c in cookies}
-        
-        token = cookie_dict.get('ACCESS_TOKEN')
-        qrator = cookie_dict.get('qrator_msid2', '')
-        
-        await browser.close()
-        
-        if not token:
-            raise ValueError("No ACCESS_TOKEN")
-        
-        self._access_token = token
-        self._qrator = qrator
-        return token
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            )
+            page = await context.new_page()
+            await Stealth().apply_stealth_async(page)
+            
+            await page.goto("https://seller.ggsel.com/")
+            await page.wait_for_timeout(2000)
+            
+            await page.evaluate(f"""
+                await fetch('/api/auth/login', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json', 'locale': 'ru'}},
+                    body: JSON.stringify({{email: '{settings.ggsel_so_username}', password: '{settings.ggsel_so_password}'}})
+                }})
+            """)
+            await page.wait_for_timeout(2000)
+            
+            cookies = await context.cookies()
+            cookie_dict = {c['name']: c['value'] for c in cookies}
+            
+            token = cookie_dict.get('ACCESS_TOKEN')
+            qrator = cookie_dict.get('qrator_msid2', '')
+            
+            await browser.close()
+            
+            if not token:
+                raise ValueError("No ACCESS_TOKEN")
+            
+            self._access_token = token
+            self._qrator = qrator
+            return token
     
     def _headers(self, token: str) -> dict:
         qrator = getattr(self, '_qrator', settings.ggsel_qrator)
