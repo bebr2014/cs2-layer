@@ -81,7 +81,7 @@ class GgselSellerOfficeClient:
     def __init__(self):
         self._access_token: str | None = None
 
-        async def _get_token(self) -> str:
+    async def _get_token(self) -> str:
         from playwright.async_api import async_playwright
         from playwright_stealth import Stealth
         
