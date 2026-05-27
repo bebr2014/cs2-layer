@@ -7,7 +7,7 @@ from app.config import settings
 config = context.config
 
 # Подставляем sync URL (psycopg2)
-sync_url = settings.database_url.replace("+asyncpg", "+psycopg2")
+sync_url = settings.database_url.replace("+asyncpg", "+psycopg2").replace("?ssl=true", "").replace("?sslmode=require", "")
 config.set_main_option("sqlalchemy.url", sync_url)
 
 if config.config_file_name is not None:
