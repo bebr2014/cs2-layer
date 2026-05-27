@@ -81,18 +81,53 @@ class GgselSellerOfficeClient:
     def __init__(self):
         self._access_token: str | None = None
 
-    async def _get_token(self) -> str:
-        self._access_token = settings.ggsel_access_token
-        return self._access_token
-
+        async def _get_token(self) -> str:
+        from playwright.async_api import async_playwright
+        from playwright_stealth import Stealth
+        
+        async with Stealth().use_async(async_playwright()) as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            )
+            page = await context.new_page()
+            
+            await page.goto("https://seller.ggsel.com/")
+            await page.wait_for_timeout(2000)
+            
+            await page.evaluate(f"""
+                fetch('/api/auth/login', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json', 'locale': 'ru'}},
+                    body: JSON.stringify({{email: '{settings.ggsel_so_username}', password: '{settings.ggsel_so_password}'}})
+                }})
+            """)
+            await page.wait_for_timeout(2000)
+            
+            cookies = await context.cookies()
+            cookie_dict = {{c['name']: c['value'] for c in cookies}}
+            
+            token = cookie_dict.get('ACCESS_TOKEN')
+            qrator = cookie_dict.get('qrator_msid2', '')
+            
+            await browser.close()
+            
+            if not token:
+                raise ValueError("No ACCESS_TOKEN")
+            
+            self._access_token = token
+            self._qrator = qrator
+            return token
+    
     def _headers(self, token: str) -> dict:
+        qrator = getattr(self, '_qrator', settings.ggsel_qrator)
         return {
             "Content-Type": "application/json",
             "locale": "ru",
             "Origin": "https://seller.ggsel.com",
             "Referer": "https://seller.ggsel.com/",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={settings.ggsel_qrator}",
+            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={qrator}",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
