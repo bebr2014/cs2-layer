@@ -10,3 +10,5 @@ python-telegram-bot==21.3
 pydantic-settings==2.2.1
 python-dotenv==1.0.1
 pydantic==2.7.1
+playwright==1.44.0
+playwright-stealth==1.0.6

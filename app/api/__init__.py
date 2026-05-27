@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from app.api.webhooks import router
-from app.config import settings
 
 app = FastAPI(title="cs2-layer")
 app.include_router(router)
@@ -121,6 +120,7 @@ async def test_bearer():
 @app.get("/test-precheck")
 async def test_precheck():
     import httpx
+    from app.config import settings
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/1?secret={settings.webhook_shared_secret}",
