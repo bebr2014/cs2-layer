@@ -8,6 +8,8 @@ config = context.config
 
 # Подставляем sync URL (psycopg2)
 sync_url = settings.database_url.replace("+asyncpg", "+psycopg2")
+if "?" in sync_url:
+    sync_url = sync_url.split("?")[0]
 config.set_main_option("sqlalchemy.url", sync_url)
 
 if config.config_file_name is not None:
