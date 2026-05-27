@@ -83,6 +83,7 @@ class GgselSellerOfficeClient:
 
     async def _get_token(self) -> str:
     from playwright_stealth import Stealth
+    from playwright.async_api import async_playwright
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
