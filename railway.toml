@@ -2,5 +2,5 @@
 builder = "dockerfile"
 
 [deploy] 
-startCommand = "alembic upgrade head && python main.py"
+startCommand = "alembic upgrade head 2>&1 | tee /tmp/alembic.log; cat /tmp/alembic.log; python main.py"
 restartPolicyType = "on_failure"
