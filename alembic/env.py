@@ -48,4 +48,10 @@ def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online()
+    try:
+        run_migrations_online()
+    except Exception as e:
+        print(f"ALEMBIC ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise
