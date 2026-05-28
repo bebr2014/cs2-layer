@@ -96,12 +96,12 @@ class GgselSellerOfficeClient:
             await page.goto("https://seller.ggsel.com/")
             await page.wait_for_timeout(2000)
             
-            await page.evaluate(f"""
-                await fetch('/api/auth/login', {{
+            await page.evaluate("""
+                fetch('/api/auth/login', {
                     method: 'POST',
-                    headers: {{'Content-Type': 'application/json', 'locale': 'ru'}},
-                    body: JSON.stringify({{email: '{settings.ggsel_so_username}', password: '{settings.ggsel_so_password}'}})
-                }})
+                    headers: {'Content-Type': 'application/json', 'locale': 'ru'},
+                    body: JSON.stringify({email: '""" + settings.ggsel_so_username + """', password: '""" + settings.ggsel_so_password + """'})
+                })
             """)
             await page.wait_for_timeout(2000)
             
