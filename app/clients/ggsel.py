@@ -107,6 +107,10 @@ class GgselSellerOfficeClient:
             
             cookies = await context.cookies()
             cookie_dict = {c['name']: c['value'] for c in cookies}
+            print(f"[PLAYWRIGHT] cookies: {[c['name'] for c in cookies]}", flush=True)
+            print(f"[PLAYWRIGHT] ACCESS_TOKEN present: {'ACCESS_TOKEN' in cookie_dict}", flush=True)
+            print(f"[PLAYWRIGHT] qrator present: {'qrator_msid2' in cookie_dict}", flush=True)
+           
             
             token = cookie_dict.get('ACCESS_TOKEN')
             qrator = cookie_dict.get('qrator_msid2', '')
