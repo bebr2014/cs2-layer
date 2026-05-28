@@ -135,24 +135,23 @@ class GgselSellerOfficeClient:
         token = await self._get_token()
         headers = self._headers(token)
         print(f"[create_draft] headers: {headers}", flush=True)
+        body = {"offer": {
+            "title_ru": title_ru,
+            "title_en": title_en,
+            "description_ru": description_ru,
+            "description_en": description_en,
+            "category_id": category_id,
+            "autoselling": False,
+            "delivery_kind": "auto",
+            "check_unique_code_url": None,
+            "cover_image_attributes": {
+                "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
+            }
+        }}
+        print(f"[create_draft] body: {body}", flush=True)
         async with httpx.AsyncClient(headers=headers, timeout=30) as client:
-            resp = await client.post(
-                f"{SELLER_OFFICE_URL}/offers/draft",
-                json={"offer": {
-                    "title_ru": title_ru,
-                    "title_en": title_en,
-                    "description_ru": description_ru,
-                    "description_en": description_en,
-                    "category_id": category_id,
-                    "autoselling": False,
-                    "delivery_kind": "auto",
-                    "check_unique_code_url": None,
-                    "cover_image_attributes": {
-                        "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
-                    }
-                }}
-            )
-            print(f"[CREATE_DRAFT] status={resp.status_code} body={resp.text[:500]}")
+            resp = await client.post(f"{SELLER_OFFICE_URL}/offers/draft", json=body)
+            print(f"[CREATE_DRAFT] status={resp.status_code} body={resp.text[:500]}", flush=True)
             resp.raise_for_status()
             return resp.json()
 
