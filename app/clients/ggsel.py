@@ -96,14 +96,10 @@ class GgselSellerOfficeClient:
             await page.goto("https://seller.ggsel.com/")
             await page.wait_for_timeout(3000)
 
-            await page.evaluate("""
-                fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'locale': 'ru'},
-                    body: JSON.stringify({email: '""" + settings.ggsel_so_username + """', password: '""" + settings.ggsel_so_password + """'})
-                })
-            """)
-            await page.wait_for_timeout(5000)
+            await page.fill("input[type=email]", settings.ggsel_so_username)
+            await page.fill("input[type=password]", settings.ggsel_so_password)
+            async with page.expect_navigation():
+                await page.click("button[type=submit]")
             
             cookies = await context.cookies()
             cookie_dict = {c['name']: c['value'] for c in cookies}
