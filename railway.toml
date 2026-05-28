@@ -2,5 +2,5 @@
 builder = "dockerfile"
 
 [deploy]
-startCommand = "python -c \"import psycopg2; conn = psycopg2.connect('postgresql://postgres:bTzcPhuovaxICNnhvFVatINSHxPgPUqs@shinkansen.proxy.rlwy.net:36960/railway', sslmode='require'); print('DB OK', flush=True); conn.close()\" && alembic upgrade head 2>&1 && echo 'ALEMBIC OK' && python main.py"
+startCommand = "python main.py"
 restartPolicyType = "on_failure"
