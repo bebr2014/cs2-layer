@@ -7,7 +7,7 @@ from app.config import settings
 config = context.config
 
 # Подставляем sync URL (psycopg2)
-sync_url = "postgresql+psycopg2://postgres:bTzcPhuovaxICNnhvFVatINSHxPgPUqs@shinkansen.proxy.rlwy.net:36960/railway"
+sync_url = "postgresql+psycopg2://postgres:bTzcPhuovaxICNnhvFVatINSHxPgPUqs@shinkansen.proxy.rlwy.net:36960/railway?sslmode=require"
 if "?" in sync_url:
     sync_url = sync_url.split("?")[0]
 config.set_main_option("sqlalchemy.url", sync_url)
