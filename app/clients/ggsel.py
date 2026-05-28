@@ -94,8 +94,8 @@ class GgselSellerOfficeClient:
             await Stealth().apply_stealth_async(page)
             
             await page.goto("https://seller.ggsel.com/")
-            await page.wait_for_timeout(2000)
-            
+            await page.wait_for_timeout(3000)
+
             await page.evaluate("""
                 fetch('/api/auth/login', {
                     method: 'POST',
@@ -103,7 +103,7 @@ class GgselSellerOfficeClient:
                     body: JSON.stringify({email: '""" + settings.ggsel_so_username + """', password: '""" + settings.ggsel_so_password + """'})
                 })
             """)
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(5000)
             
             cookies = await context.cookies()
             cookie_dict = {c['name']: c['value'] for c in cookies}
@@ -125,14 +125,14 @@ class GgselSellerOfficeClient:
             return token
     
     def _headers(self, token: str) -> dict:
-        qrator = getattr(self, '_qrator', settings.ggsel_qrator)
+        qrator = cookie_dict.get('qrator_msid2') or cookie_dict.get('qrator_ssid2', '')
         return {
             "Content-Type": "application/json",
             "locale": "ru",
             "Origin": "https://seller.ggsel.com",
             "Referer": "https://seller.ggsel.com/",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={qrator}",
+            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={cookie_dict.get('qrator_msid2', '')}; qrator_ssid2={cookie_dict.get('qrator_ssid2', '')}",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
