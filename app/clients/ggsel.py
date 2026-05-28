@@ -121,18 +121,18 @@ class GgselSellerOfficeClient:
                 raise ValueError("No ACCESS_TOKEN")
             
             self._access_token = token
-            self._qrator = qrator
+            self._qrator = cookie_dict.get('qrator_msid2') or cookie_dict.get('qrator_ssid2', '')
             return token
     
     def _headers(self, token: str) -> dict:
-        qrator = cookie_dict.get('qrator_msid2') or cookie_dict.get('qrator_ssid2', '')
+        qrator = getattr(self, '_qrator', '')
         return {
             "Content-Type": "application/json",
             "locale": "ru",
             "Origin": "https://seller.ggsel.com",
             "Referer": "https://seller.ggsel.com/",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_msid2={cookie_dict.get('qrator_msid2', '')}; qrator_ssid2={cookie_dict.get('qrator_ssid2', '')}",
+            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_ssid2={qrator}",
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
