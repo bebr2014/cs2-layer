@@ -1,4 +1,5 @@
 import hashlib
+import json
 import time
 import httpx
 from app.config import settings
@@ -81,10 +82,10 @@ class GgselSellerOfficeClient:
     def __init__(self):
         self._access_token: str | None = None
 
-    async def _get_token(self) -> str:
+    async def _get_token(self, draft_body: dict | None = None):
         from playwright_stealth import Stealth
         from playwright.async_api import async_playwright
-        
+
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
@@ -92,7 +93,7 @@ class GgselSellerOfficeClient:
             )
             page = await context.new_page()
             await Stealth().apply_stealth_async(page)
-            
+
             await page.goto("https://seller.ggsel.com/")
             await page.wait_for_timeout(3000)
 
@@ -100,24 +101,37 @@ class GgselSellerOfficeClient:
             await page.fill("input[type=password]", settings.ggsel_so_password)
             async with page.expect_navigation():
                 await page.click("button[type=submit]")
-            
+
             cookies = await context.cookies()
             cookie_dict = {c['name']: c['value'] for c in cookies}
             print(f"[PLAYWRIGHT] cookies: {[c['name'] for c in cookies]}", flush=True)
             print(f"[PLAYWRIGHT] ACCESS_TOKEN present: {'ACCESS_TOKEN' in cookie_dict}", flush=True)
             print(f"[PLAYWRIGHT] qrator present: {'qrator_msid2' in cookie_dict}", flush=True)
-           
-            
+
             token = cookie_dict.get('ACCESS_TOKEN')
-            qrator = cookie_dict.get('qrator_msid2', '')
-            
-            await browser.close()
-            
+
             if not token:
+                await browser.close()
                 raise ValueError("No ACCESS_TOKEN")
-            
+
             self._access_token = token
             self._qrator = cookie_dict.get('qrator_msid2') or cookie_dict.get('qrator_ssid2', '')
+
+            if draft_body is not None:
+                headers = self._headers(token)
+                print(f"[create_draft] headers: {headers}", flush=True)
+                print(f"[create_draft] body: {draft_body}", flush=True)
+                response = await page.request.post(
+                    f"{SELLER_OFFICE_URL}/offers/draft",
+                    headers=headers,
+                    data=json.dumps(draft_body),
+                )
+                result = await response.json()
+                print(f"[CREATE_DRAFT] status={response.status} body={str(result)[:500]}", flush=True)
+                await browser.close()
+                return result
+
+            await browser.close()
             return token
     
     def _headers(self, token: str) -> dict:
@@ -132,9 +146,6 @@ class GgselSellerOfficeClient:
         }
 
     async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
-        token = await self._get_token()
-        headers = self._headers(token)
-        print(f"[create_draft] headers: {headers}", flush=True)
         body = {"offer": {
             "title_ru": title_ru,
             "title_en": title_en,
@@ -148,12 +159,7 @@ class GgselSellerOfficeClient:
                 "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
             }
         }}
-        print(f"[create_draft] body: {body}", flush=True)
-        async with httpx.AsyncClient(headers=headers, timeout=30) as client:
-            resp = await client.post(f"{SELLER_OFFICE_URL}/offers/draft", json=body)
-            print(f"[CREATE_DRAFT] status={resp.status_code} body={resp.text[:500]}", flush=True)
-            resp.raise_for_status()
-            return resp.json()
+        return await self._get_token(draft_body=body)
 
     async def update_price(self, offer_id: int, price: float) -> dict:
         token = await self._get_token()
