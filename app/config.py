@@ -6,8 +6,8 @@ class Settings(BaseSettings):
 
     ggsel_seller_id: str
     ggsel_api_key: str
-    ggsel_so_username: str
-    ggsel_so_password: str
+    ggsel_so_username: str = ""
+    ggsel_so_password: str = ""
 
     webhook_shared_secret: str
 

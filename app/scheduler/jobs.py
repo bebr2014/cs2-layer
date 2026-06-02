@@ -73,9 +73,8 @@ async def reconcile():
 async def token_refresh():
     print(f"[Scheduler] token_refresh started at {datetime.utcnow()}")
     try:
-        from app.clients.ggsel import ggsel_seller, ggsel_office
+        from app.clients.ggsel import ggsel_seller
         await ggsel_seller._get_token()
-        await ggsel_office._get_token()
         print("[Scheduler] token_refresh: OK")
     except Exception as e:
         from app.alerts import critical

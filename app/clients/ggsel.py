@@ -1,11 +1,10 @@
 import hashlib
-import json
 import time
 import httpx
 from app.config import settings
 
 SELLER_API_URL = "https://seller.ggsel.com/api_sellers/api"
-SELLER_OFFICE_URL = "https://seller.ggsel.com/api/v1"
+SELLER_OFFICE_V2_URL = "https://back-office.ggselstg.org/api_sellers/v2"
 
 
 class GgselSellerAPIClient:
@@ -77,205 +76,101 @@ class GgselSellerAPIClient:
 
 
 class GgselSellerOfficeClient:
-    """Seller Office API — создание офферов, управление, доставка."""
+    """Seller Office API v2 — создание офферов, управление, доставка."""
 
-    def __init__(self):
-        self._access_token: str | None = None
-
-    async def _get_token(self, draft_body: dict | None = None):
-        from playwright_stealth import Stealth
-        from playwright.async_api import async_playwright
-
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            )
-            page = await context.new_page()
-            await Stealth().apply_stealth_async(page)
-
-            await page.goto("https://seller.ggsel.com/")
-            await page.wait_for_timeout(3000)
-
-            await page.fill("input[type=email]", settings.ggsel_so_username)
-            await page.fill("input[type=password]", settings.ggsel_so_password)
-            async with page.expect_navigation():
-                await page.click("button[type=submit]")
-
-            cookies = await context.cookies()
-            cookie_dict = {c['name']: c['value'] for c in cookies}
-            print(f"[PLAYWRIGHT] cookies: {[c['name'] for c in cookies]}", flush=True)
-            print(f"[PLAYWRIGHT] ACCESS_TOKEN present: {'ACCESS_TOKEN' in cookie_dict}", flush=True)
-            print(f"[PLAYWRIGHT] qrator present: {'qrator_msid2' in cookie_dict}", flush=True)
-
-            token = cookie_dict.get('ACCESS_TOKEN')
-
-            if not token:
-                await browser.close()
-                raise ValueError("No ACCESS_TOKEN")
-
-            self._access_token = token
-            self._qrator = cookie_dict.get('qrator_msid2') or cookie_dict.get('qrator_ssid2', '')
-
-            if draft_body is not None:
-                headers = self._headers(token)
-                print(f"[create_draft] headers: {headers}", flush=True)
-                print(f"[create_draft] body: {draft_body}", flush=True)
-                response = await page.request.post(
-                    f"{SELLER_OFFICE_URL}/offers/draft",
-                    headers=headers,
-                    data=json.dumps(draft_body),
-                )
-                result = await response.json()
-                print(f"[CREATE_DRAFT] status={response.status} body={str(result)[:500]}", flush=True)
-                await browser.close()
-                return result
-
-            await browser.close()
-            return token
-    
-    def _headers(self, token: str) -> dict:
-        qrator = getattr(self, '_qrator', '')
+    def _headers(self) -> dict:
         return {
             "Content-Type": "application/json",
-            "locale": "ru",
-            "Origin": "https://seller.ggsel.com",
-            "Referer": "https://seller.ggsel.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Cookie": f"ACCESS_TOKEN={token}; user-role=seller; qrator_ssid2={qrator}",
+            "Authorization": settings.ggsel_api_key,
         }
 
-    async def create_draft(self, title_ru, title_en, description_ru, description_en, category_id, cover_base64):
-        body = {"offer": {
+    async def create_offer(
+        self,
+        title_ru: str,
+        title_en: str,
+        description_ru: str,
+        description_en: str,
+        category_id: int,
+        cover_base64: str,
+        price: float,
+        precheck_url: str,
+        notification_url: str,
+    ) -> dict:
+        body = {
             "title_ru": title_ru,
             "title_en": title_en,
             "description_ru": description_ru,
             "description_en": description_en,
+            "cover_image_ru": cover_base64,
+            "price": price,
+            "currency": "RUB",
+            "is_autoselling": False,
             "category_id": category_id,
-            "autoselling": False,
-            "delivery_kind": "auto",
-            "check_unique_code_url": None,
-            "cover_image_attributes": {
-                "attachment_data_uri": f"data:image/png;base64,{cover_base64}"
-            }
-        }}
-        return await self._get_token(draft_body=body)
+            "delivery": "manual",
+            "pre_payment_settings": {
+                "is_enabled": True,
+                "url": precheck_url,
+                "allow_payment": False,
+            },
+            "notification_settings": {
+                "type": "url",
+                "url": notification_url,
+                "http_method": "POST",
+                "is_disabled": False,
+                "is_default": False,
+            },
+        }
+        async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
+            resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers", json=body)
+            resp.raise_for_status()
+            return resp.json()
 
     async def update_price(self, offer_id: int, price: float) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=30) as client:
+        async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
             resp = await client.patch(
-                f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_price",
-                json={"offer": {"price": price, "unlimited_quantity": True}}
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def create_option(self, offer_id: int) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
-            resp = await client.post(
-                f"{SELLER_OFFICE_URL}/offers/{offer_id}/options",
-                json={"option": {
-                    "title_ru": "Ваш Steam Trade URL",
-                    "title_en": "Your Steam Trade URL",
-                    "comment_ru": "Ссылка вида https://steamcommunity.com/tradeoffer/new/?partner=...&token=...",
-                    "required": True,
-                    "kind": "text",
-                    "position": 1,
-                }}
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def set_delivery_kind(self, offer_id: int) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
-            resp = await client.put(
-                f"{SELLER_OFFICE_URL}/offers/{offer_id}",
-                json={"offer": {"delivery_kind": "manual"}}
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def set_precheck(self, offer_id: int, option_id: int) -> dict:
-        token = await self._get_token()
-        url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/{offer_id}?secret={settings.webhook_shared_secret}"
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
-            resp = await client.put(
-                f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_precheck_settings",
-                json={"offer": {
-                    "enabled": True,
-                    "url": url,
-                    "allow_payment": False,
-                    "show_option_ids": [option_id],
-                }}
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def set_notification(self, offer_id: int) -> dict:
-        token = await self._get_token()
-        url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/notification/{offer_id}?secret={settings.webhook_shared_secret}"
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
-            resp = await client.patch(
-                f"{SELLER_OFFICE_URL}/offers/{offer_id}/update_notification",
-                json={"notification": {
-                    "kind": "url",
-                    "url": url,
-                    "method": "post",
-                    "default": False,
-                    "disabled": False,
-                }}
+                f"{SELLER_OFFICE_V2_URL}/offers/{offer_id}",
+                json={"price": price},
             )
             resp.raise_for_status()
             return resp.json()
 
     async def activate_offer(self, offer_id: int) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
-            resp = await client.post(
-                f"{SELLER_OFFICE_URL}/offers/{offer_id}/activate"
-            )
+        async with httpx.AsyncClient(headers=self._headers(), timeout=10) as client:
+            resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers/{offer_id}/activate")
             resp.raise_for_status()
             return resp.json()
 
     async def pause_offers(self, offer_ids: list[int]) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+        async with httpx.AsyncClient(headers=self._headers(), timeout=10) as client:
             resp = await client.post(
-                f"{SELLER_OFFICE_URL}/offers/batch/actions/pause",
-                json={"offer_ids": offer_ids}
+                f"{SELLER_OFFICE_V2_URL}/offers/batch/actions/pause",
+                json={"offer_ids": offer_ids},
             )
             resp.raise_for_status()
             return resp.json()
 
     async def activate_offers(self, offer_ids: list[int]) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+        async with httpx.AsyncClient(headers=self._headers(), timeout=10) as client:
             resp = await client.post(
-                f"{SELLER_OFFICE_URL}/offers/batch/actions/activate",
-                json={"offer_ids": offer_ids}
+                f"{SELLER_OFFICE_V2_URL}/offers/batch/actions/activate",
+                json={"offer_ids": offer_ids},
             )
             resp.raise_for_status()
             return resp.json()
 
     async def mark_delivered(self, order_id: int) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(headers=self._headers(token), timeout=10) as client:
+        async with httpx.AsyncClient(headers=self._headers(), timeout=10) as client:
             resp = await client.post(
-                f"{SELLER_OFFICE_URL}/orders/{order_id}/deliveries/delivered"
+                f"{SELLER_OFFICE_V2_URL}/orders/{order_id}/deliveries/delivered"
             )
             resp.raise_for_status()
             return resp.json()
 
     async def get_order(self, order_id: int) -> dict:
-        token = await self._get_token()
-        headers = {**self._headers(token), "currency": "RUB"}
-        async with httpx.AsyncClient(headers=headers, timeout=10) as client:
-            resp = await client.get(
-                f"{SELLER_OFFICE_URL}/orders/{order_id}"
-            )
+        async with httpx.AsyncClient(
+            headers={**self._headers(), "currency": "RUB"}, timeout=10
+        ) as client:
+            resp = await client.get(f"{SELLER_OFFICE_V2_URL}/orders/{order_id}")
             resp.raise_for_status()
             return resp.json()
 
