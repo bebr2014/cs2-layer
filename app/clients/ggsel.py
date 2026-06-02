@@ -120,8 +120,11 @@ class GgselSellerOfficeClient:
                 "is_default": False,
             },
         }
+        import json as _json
+        print(f"[create_offer] body: {_json.dumps(body, ensure_ascii=False)}", flush=True)
         async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
             resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers", json=body)
+            print(f"[create_offer] status={resp.status_code} response={resp.text[:500]}", flush=True)
             resp.raise_for_status()
             return resp.json()
 
