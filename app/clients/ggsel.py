@@ -101,7 +101,7 @@ class GgselSellerOfficeClient:
             "title_en": title_en,
             "description_ru": description_ru,
             "description_en": description_en,
-            "cover_image_ru": cover_base64,
+            "cover_image_ru": f"data:image/png;base64,{cover_base64}",
             "price": price,
             "currency": "RUB",
             "is_autoselling": False,
