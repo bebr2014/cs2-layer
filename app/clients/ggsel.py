@@ -139,7 +139,11 @@ class GgselSellerOfficeClient:
 
     async def activate_offer(self, offer_id: int) -> dict:
         async with httpx.AsyncClient(headers=self._headers(), timeout=10) as client:
-            resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers/{offer_id}/activate")
+            resp = await client.post(
+                f"{SELLER_OFFICE_V2_URL}/offers/batch_activate",
+                json={"offer_ids": [offer_id]},
+            )
+            print(f"[activate_offer] status={resp.status_code} response={resp.text[:500]}", flush=True)
             resp.raise_for_status()
             return resp.json()
 
