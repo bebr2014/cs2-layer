@@ -35,7 +35,16 @@ class XPandaClient:
                 params = [("names[]", n) for n in names]
             resp = await client.get(f"{BASE_URL}/v1/items/prices/", params=params)
             resp.raise_for_status()
-            return resp.json()
+            raw = resp.json()
+            items = [
+                {
+                    "market_hash_name": item["n"],
+                    "price": item["p"] / 100,
+                    "quantity": item.get("q", 1),
+                }
+                for item in raw
+            ]
+            return {"items": items}
 
     async def create_purchase(
         self,
