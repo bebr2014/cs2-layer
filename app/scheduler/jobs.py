@@ -20,8 +20,7 @@ async def xpanda_sync():
     from app.clients.xpanda import xpanda
     from app.config import settings
     try:
-        snapshot = await xpanda.get_prices()
-        items = snapshot.get("items", [])
+        items = await xpanda.get_prices()
         print(f"[Scheduler] Got {len(items)} items from xPanda")
     except Exception as e:
         from app.alerts import warn
@@ -32,9 +31,9 @@ async def xpanda_sync():
         updated = 0
         created = 0
         for item in items:
-            name = item.get("market_hash_name") or item.get("name")
-            price_usd = item.get("price")
-            qty = item.get("quantity", 1)
+            name = item.get("n")
+            price_usd = item.get("p", 0) / 100
+            qty = item.get("q", 0)
             if not name or not price_usd:
                 continue
 
