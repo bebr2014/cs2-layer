@@ -22,6 +22,7 @@ async def xpanda_sync():
     try:
         items = await xpanda.get_prices()
         print(f"[Scheduler] Got {len(items)} items from xPanda")
+        print(f"[DEBUG] first item: {items[0] if items else 'empty'}")
     except Exception as e:
         from app.alerts import warn
         await warn(f"xpanda_sync_failed: {e}")
