@@ -118,6 +118,30 @@ async def fix_precheck_urls():
                 errors.append({"ggsel_offer_id": gid, "error": str(e)})
         return {"updated": updated, "errors": errors}
 
+@app.get("/fix-options")
+async def fix_options():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Offer, OfferStatus
+    from app.clients.ggsel import ggsel_office
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Offer).where(
+                Offer.ggsel_offer_id.isnot(None),
+                Offer.status == OfferStatus.active,
+            )
+        )
+        offers = result.scalars().all()
+        updated = 0
+        errors = []
+        for offer in offers:
+            try:
+                await ggsel_office.create_option(offer.ggsel_offer_id)
+                updated += 1
+            except Exception as e:
+                errors.append({"ggsel_offer_id": offer.ggsel_offer_id, "error": str(e)})
+        return {"updated": updated, "errors": errors}
+
 @app.get("/create-ak47-tasks")
 async def create_ak47_tasks():
     from app.db import AsyncSessionLocal

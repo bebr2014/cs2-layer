@@ -64,6 +64,25 @@ class GgselSellerOfficeClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def create_option(self, offer_id: int) -> dict:
+        body = {
+            "options": [
+                {
+                    "type": "text",
+                    "title_ru": "Ваш Steam Trade URL",
+                    "title_en": "Your Steam Trade URL",
+                    "comment_ru": "Ссылка вида https://steamcommunity.com/tradeoffer/new/?partner=...&token=...",
+                    "is_required": True,
+                    "position": 1,
+                }
+            ]
+        }
+        async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
+            resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers/{offer_id}/options", json=body)
+            print(f"[create_option] status={resp.status_code} response={resp.text[:500]}", flush=True)
+            resp.raise_for_status()
+            return resp.json()
+
     async def update_price(self, offer_id: int, price: float) -> dict:
         async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
             resp = await client.patch(
