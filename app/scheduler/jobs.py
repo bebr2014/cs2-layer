@@ -62,6 +62,9 @@ async def xpanda_sync():
                 )
                 db.add(offer)
                 created += 1
+                if "AK-47" in name:
+                    await db.flush()
+                    db.add(Task(kind=TaskKind.CREATE_OFFER, payload={"offer_id": offer.id}))
 
         await db.commit()
         print(f"[Scheduler] xpanda_sync done: {created} created, {updated} updated")
