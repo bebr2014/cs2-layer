@@ -20,7 +20,7 @@ async def deliver_order(order_id: int) -> None:
 
         from app.clients.xpanda import xpanda
         resp = await xpanda.create_purchase(
-            product=order.market_hash_name,
+            market_hash_name=order.market_hash_name,
             partner=order.steam_partner,
             token=order.steam_token,
             max_price=max_price_cents,
