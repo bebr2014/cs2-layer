@@ -118,6 +118,27 @@ async def fix_precheck_urls():
                 errors.append({"ggsel_offer_id": gid, "error": str(e)})
         return {"updated": updated, "errors": errors}
 
+@app.get("/retry-deliver")
+async def retry_deliver():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Task, TaskKind, TaskStatus
+    from sqlalchemy import select
+    from datetime import datetime
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Task).where(
+                Task.kind == TaskKind.DELIVER,
+                Task.status == TaskStatus.failed,
+            )
+        )
+        tasks = result.scalars().all()
+        for task in tasks:
+            task.status = TaskStatus.pending
+            task.attempts = 0
+            task.scheduled_at = datetime.utcnow()
+        await db.commit()
+        return {"reset": len(tasks)}
+
 @app.get("/fix-options")
 async def fix_options():
     from app.db import AsyncSessionLocal
