@@ -22,8 +22,6 @@ class GgselSellerOfficeClient:
         category_id: int,
         cover_base64: str,
         price: float,
-        precheck_url: str,
-        notification_url: str,
     ) -> dict:
         body = {
             "title_ru": title_ru,
@@ -36,6 +34,17 @@ class GgselSellerOfficeClient:
             "is_autoselling": False,
             "category_id": category_id,
             "delivery": "manual",
+        }
+        import json as _json
+        print(f"[create_offer] body: {_json.dumps(body, ensure_ascii=False)}", flush=True)
+        async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
+            resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers", json=body)
+            print(f"[create_offer] status={resp.status_code} response={resp.text[:500]}", flush=True)
+            resp.raise_for_status()
+            return resp.json()
+
+    async def patch_offer(self, offer_id: int, precheck_url: str, notification_url: str) -> dict:
+        body = {
             "pre_payment_settings": {
                 "is_enabled": True,
                 "url": precheck_url,
@@ -49,11 +58,9 @@ class GgselSellerOfficeClient:
                 "is_default": False,
             },
         }
-        import json as _json
-        print(f"[create_offer] body: {_json.dumps(body, ensure_ascii=False)}", flush=True)
         async with httpx.AsyncClient(headers=self._headers(), timeout=30) as client:
-            resp = await client.post(f"{SELLER_OFFICE_V2_URL}/offers", json=body)
-            print(f"[create_offer] status={resp.status_code} response={resp.text[:500]}", flush=True)
+            resp = await client.patch(f"{SELLER_OFFICE_V2_URL}/offers/{offer_id}", json=body)
+            print(f"[patch_offer] status={resp.status_code} response={resp.text[:500]}", flush=True)
             resp.raise_for_status()
             return resp.json()
 

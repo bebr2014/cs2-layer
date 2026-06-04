@@ -49,8 +49,6 @@ async def create_offer(offer_id: int) -> None:
         price_rub = float(offer.ggsel_price_rub or 100)
         title_en, title_ru = build_titles(market_hash_name)
         desc_ru, desc_en = build_description(market_hash_name)
-        precheck_url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/{offer_id}?secret={settings.webhook_shared_secret}"
-        notification_url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/notification/{offer_id}?secret={settings.webhook_shared_secret}"
 
         try:
             if not offer.ggsel_offer_id:
@@ -62,13 +60,16 @@ async def create_offer(offer_id: int) -> None:
                     category_id=settings.cs2_category_id,
                     cover_base64=DEFAULT_COVER_B64,
                     price=price_rub,
-                    precheck_url=precheck_url,
-                    notification_url=notification_url,
                 )
                 offer.ggsel_offer_id = data["data"]["id"]
                 offer.ggsel_id_goods = data["data"].get("ggsel_id")
                 offer.status = OfferStatus.draft
                 await db.commit()
+
+                ggsel_offer_id = offer.ggsel_offer_id
+                precheck_url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/{ggsel_offer_id}?secret={settings.webhook_shared_secret}"
+                notification_url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/notification/{ggsel_offer_id}?secret={settings.webhook_shared_secret}"
+                await ggsel_office.patch_offer(ggsel_offer_id, precheck_url, notification_url)
 
             ggsel_id = offer.ggsel_offer_id
             await ggsel_office.activate_offer(ggsel_id)
