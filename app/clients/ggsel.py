@@ -1,78 +1,7 @@
-import hashlib
-import time
 import httpx
 from app.config import settings
 
-SELLER_API_URL = "https://seller.ggsel.com/api_sellers/api"
 SELLER_OFFICE_V2_URL = "https://back-office.ggselstg.org/api_sellers/v2"
-
-
-class GgselSellerAPIClient:
-    """Публичный Seller API v1 — bulk price update, purchase info, chat."""
-
-    def __init__(self):
-        self._token: str | None = None
-
-    async def _get_token(self) -> str:
-        ts = int(time.time())
-        sign = hashlib.sha256(
-            f"{settings.ggsel_api_key}{ts}".encode()
-        ).hexdigest()
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"{SELLER_API_URL}/apilogin",
-                json={
-                    "seller_id": int(settings.ggsel_seller_id),
-                    "timestamp": ts,
-                    "sign": sign,
-                }
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            self._token = data["token"]
-            return self._token
-
-    async def update_prices(self, items: list[dict]) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                f"{SELLER_API_URL}/product/edit/prices",
-                params={"token": token},
-                json=items,
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def get_task_status(self, task_id: str) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
-                f"{SELLER_API_URL}/product/edit/UpdateProductsTaskStatus",
-                params={"token": token, "taskId": task_id},
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def get_last_sales(self, top: int = 100) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
-                f"{SELLER_API_URL}/seller-last-sales",
-                params={"token": token, "top": top},
-            )
-            resp.raise_for_status()
-            return resp.json()
-
-    async def send_chat(self, order_id: int, message: str) -> dict:
-        token = await self._get_token()
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"{SELLER_API_URL}/debates/v2",
-                params={"token": token, "id_i": order_id},
-                json={"message": message},
-            )
-            resp.raise_for_status()
-            return resp.json()
 
 
 class GgselSellerOfficeClient:
@@ -182,5 +111,4 @@ class GgselSellerOfficeClient:
             return resp.json()
 
 
-ggsel_seller = GgselSellerAPIClient()
 ggsel_office = GgselSellerOfficeClient()
