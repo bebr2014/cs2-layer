@@ -17,8 +17,8 @@ async def myip():
 async def test_xpanda():
     from app.clients.xpanda import xpanda
     data = await xpanda.get_prices()
-    items = data if isinstance(data, list) else data.get("items", data)
-    return {"count": len(items) if isinstance(items, list) else None, "sample": items[:3] if isinstance(items, list) else items}
+    items = data.get("items", []) if isinstance(data, dict) else data
+    return {"raw": data, "count": len(items), "first_3": items[:3]}
 @app.get("/test-ggsel-office")
 async def test_ggsel_office():
     import httpx
