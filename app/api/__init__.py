@@ -94,3 +94,21 @@ async def test_precheck():
             }
         )
         return resp.json()
+
+@app.get("/create-ak47-tasks")
+async def create_ak47_tasks():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Offer, OfferStatus, Task, TaskKind
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Offer).where(
+                Offer.market_hash_name.contains("AK-47"),
+                Offer.status == OfferStatus.pending_create,
+            )
+        )
+        offers = result.scalars().all()
+        for offer in offers:
+            db.add(Task(kind=TaskKind.CREATE_OFFER, payload={"offer_id": offer.id}))
+        await db.commit()
+        return {"created": len(offers), "offer_ids": [o.id for o in offers]}
