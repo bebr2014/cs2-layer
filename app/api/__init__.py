@@ -95,6 +95,29 @@ async def test_precheck():
         )
         return resp.json()
 
+@app.get("/fix-precheck-urls")
+async def fix_precheck_urls():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Offer
+    from app.clients.ggsel import ggsel_office
+    from app.config import settings
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Offer).where(Offer.ggsel_offer_id.isnot(None)))
+        offers = result.scalars().all()
+        updated = 0
+        errors = []
+        for offer in offers:
+            gid = offer.ggsel_offer_id
+            precheck_url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/precheck/{gid}?secret={settings.webhook_shared_secret}"
+            notification_url = f"https://cs2-layer-production.up.railway.app/hooks/ggsel/notification/{gid}?secret={settings.webhook_shared_secret}"
+            try:
+                await ggsel_office.patch_offer(gid, precheck_url, notification_url)
+                updated += 1
+            except Exception as e:
+                errors.append({"ggsel_offer_id": gid, "error": str(e)})
+        return {"updated": updated, "errors": errors}
+
 @app.get("/create-ak47-tasks")
 async def create_ak47_tasks():
     from app.db import AsyncSessionLocal
