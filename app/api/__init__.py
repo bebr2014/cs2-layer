@@ -15,14 +15,10 @@ async def myip():
         return resp.json()
 @app.get("/test-xpanda")
 async def test_xpanda():
-    import httpx
-    from app.config import settings
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(
-            "https://p2p.xpanda.pro/api/v1/balance/",
-            headers={"Authorization": settings.xpanda_api_key}
-        )
-        return {"status": resp.status_code, "body": resp.json()}
+    from app.clients.xpanda import xpanda
+    data = await xpanda.get_prices()
+    items = data if isinstance(data, list) else data.get("items", data)
+    return {"count": len(items) if isinstance(items, list) else None, "sample": items[:3] if isinstance(items, list) else items}
 @app.get("/test-ggsel-office")
 async def test_ggsel_office():
     import httpx
