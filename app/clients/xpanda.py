@@ -57,8 +57,10 @@ class XPandaClient:
             "custom_id": custom_id,
         }
         payload["sign"] = self._sign(payload)
+        print(f"[create_purchase] payload: {payload}", flush=True)
         async with httpx.AsyncClient(headers=self.headers, timeout=10) as client:
             resp = await client.post(f"{BASE_URL}/v1/purchases/", json=payload)
+            print(f"[create_purchase] status={resp.status_code} response={resp.text[:500]}", flush=True)
             resp.raise_for_status()
             return resp.json()
 
