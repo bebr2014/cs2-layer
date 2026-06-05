@@ -14,15 +14,16 @@ class XPandaClient:
             "Content-Type": "application/json",
         }
 
-    def _sign(self, market_hash_name: str, partner: str, token: str,
-              max_price: int, custom_id: str) -> str:
-        # ФОРМАТ ПОДПИСИ — ЗАГЛУШКА, уточнить у xPanda
-        msg = f"{market_hash_name}|{partner}|{token}|{max_price}|{custom_id}"
-        return hmac.new(
-            settings.xpanda_hmac_secret.encode(),
-            msg.encode(),
-            hashlib.sha256
-        ).hexdigest()
+    def _sign(self, params: dict) -> str:
+        params_list = []
+        for key in sorted(params.keys()):
+            if isinstance(params[key], (dict, list)):
+                continue
+            if key == 'sign':
+                continue
+            params_list.append('%s:%s' % (key, params[key]))
+        params_string = ';'.join(params_list)
+        return hmac.new(settings.xpanda_hmac_secret.encode(), params_string.encode(), hashlib.sha256).hexdigest()
 
     async def get_prices(self, names: list[str] = None) -> dict:
         """
@@ -48,15 +49,14 @@ class XPandaClient:
         """
         POST /v1/purchases/ — заказать скин у xPanda.
         """
-        sign = ""  # TODO: уточнить формат подписи у xPanda
         payload = {
             "product": market_hash_name,
             "partner": partner,
             "token": token,
             "max_price": max_price,
             "custom_id": custom_id,
-            "sign": sign,
         }
+        payload["sign"] = self._sign(payload)
         async with httpx.AsyncClient(headers=self.headers, timeout=10) as client:
             resp = await client.post(f"{BASE_URL}/v1/purchases/", json=payload)
             resp.raise_for_status()
