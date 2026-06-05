@@ -153,33 +153,34 @@ async def retry_deliver():
 
 @app.get("/fix-duplicate-options")
 async def fix_duplicate_options():
-    from app.db import AsyncSessionLocal
-    from app.db.models import Offer, OfferStatus
-    from app.clients.ggsel import ggsel_office
-    from sqlalchemy import select
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Offer).where(
-                Offer.ggsel_offer_id.isnot(None),
-                Offer.status == OfferStatus.active,
+    import asyncio
+    async def _run():
+        from app.db import AsyncSessionLocal
+        from app.db.models import Offer, OfferStatus
+        from app.clients.ggsel import ggsel_office
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(Offer).where(
+                    Offer.ggsel_offer_id.isnot(None),
+                    Offer.status == OfferStatus.active,
+                )
             )
-        )
-        offers = result.scalars().all()
-    fixed = 0
-    errors = []
-    for offer in offers:
-        gid = offer.ggsel_offer_id
-        try:
-            data = await ggsel_office.get_options(gid)
-            options = data.get("data", [])
-            if len(options) <= 1:
-                continue
-            to_delete = [o["id"] for o in options[1:]]
-            await ggsel_office.delete_options(gid, to_delete)
-            fixed += 1
-        except Exception as e:
-            errors.append({"ggsel_offer_id": gid, "error": str(e)})
-    return {"fixed": fixed, "errors": errors}
+            offers = result.scalars().all()
+        for offer in offers:
+            gid = offer.ggsel_offer_id
+            try:
+                data = await ggsel_office.get_options(gid)
+                options = data.get("data", [])
+                if len(options) <= 1:
+                    continue
+                to_delete = [o["id"] for o in options[1:]]
+                await ggsel_office.delete_options(gid, to_delete)
+                print(f"[fix-duplicate-options] fixed offer {gid}: deleted {len(to_delete)} extra options", flush=True)
+            except Exception as e:
+                print(f"[fix-duplicate-options] error offer {gid}: {e}", flush=True)
+    asyncio.create_task(_run())
+    return {"status": "started"}
 
 @app.get("/fix-options")
 async def fix_options():
