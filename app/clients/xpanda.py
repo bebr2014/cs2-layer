@@ -48,7 +48,7 @@ class XPandaClient:
         """
         POST /v1/purchases/ — заказать скин у xPanda.
         """
-        sign = self._sign(market_hash_name, partner, token, max_price, custom_id)
+        sign = ""  # TODO: уточнить формат подписи у xPanda
         payload = {
             "product": market_hash_name,
             "partner": partner,
