@@ -27,6 +27,7 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
 
     product = body.get("product", {})
     options = body.get("options", [])
+    id_i = body.get("id_i")
 
     # Найти оффер
     async with AsyncSessionLocal() as db:
@@ -57,6 +58,9 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
     if not match:
         return {"error": "Неверный формат Steam Trade URL"}
 
+    partner = match.group(1)
+    token = match.group(2)
+
     # Проверить qty у xPanda
     async with AsyncSessionLocal() as db:
         result = await db.execute(
@@ -65,6 +69,29 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
         offer_db = result.scalar_one_or_none()
         if offer_db and offer_db.xpanda_qty == 0:
             return {"error": "Товар временно недоступен"}
+
+        # Сохранить trade URL если есть id_i
+        if id_i is not None:
+            result = await db.execute(
+                select(Order).where(Order.ggsel_order_id == id_i)
+            )
+            order = result.scalar_one_or_none()
+            if order:
+                order.steam_trade_url = trade_url
+                order.steam_partner = partner
+                order.steam_token = token
+            else:
+                order = Order(
+                    ggsel_order_id=id_i,
+                    offer_id=offer.id,
+                    market_hash_name=offer.market_hash_name,
+                    steam_trade_url=trade_url,
+                    steam_partner=partner,
+                    steam_token=token,
+                    xpanda_custom_id=str(id_i),
+                )
+                db.add(order)
+            await db.commit()
 
     return {"error": None}
 
