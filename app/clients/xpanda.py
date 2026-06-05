@@ -58,7 +58,7 @@ class XPandaClient:
             "sign": sign,
         }
         async with httpx.AsyncClient(headers=self.headers, timeout=10) as client:
-            resp = await client.post(f"{BASE_URL}/purchases/", json=payload)
+            resp = await client.post(f"{BASE_URL}/v1/purchases/", json=payload)
             resp.raise_for_status()
             return resp.json()
 
