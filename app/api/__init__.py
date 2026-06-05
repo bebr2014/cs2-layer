@@ -118,6 +118,18 @@ async def fix_precheck_urls():
                 errors.append({"ggsel_offer_id": gid, "error": str(e)})
         return {"updated": updated, "errors": errors}
 
+@app.get("/debug-order")
+async def debug_order():
+    from app.db import AsyncSessionLocal
+    from app.db.models import Order
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Order).order_by(Order.id.desc()).limit(1))
+        order = result.scalar_one_or_none()
+        if not order:
+            return {"error": "no orders"}
+        return {c.name: getattr(order, c.name) for c in Order.__table__.columns}
+
 @app.get("/retry-deliver")
 async def retry_deliver():
     from app.db import AsyncSessionLocal
