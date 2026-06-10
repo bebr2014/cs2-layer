@@ -120,6 +120,7 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
 async def notification(offer_id: int, request: Request, secret: str = ""):
     check_secret(secret)
     body = await request.json()
+    print(f"[notification] body: {body}", flush=True)
 
     id_i = body.get("id_i")
     id_d = body.get("id_d")
