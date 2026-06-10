@@ -61,6 +61,7 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
 
     partner = match.group(1)
     token = match.group(2)
+    print(f"[precheck] offer_id={offer_id} trade_url={trade_url} partner={partner} token={token} id_i={id_i}", flush=True)
 
     # Проверить qty у xPanda
     async with AsyncSessionLocal() as db:
