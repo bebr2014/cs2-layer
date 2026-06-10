@@ -24,6 +24,7 @@ def check_secret(secret: str):
 async def precheck(offer_id: int, request: Request, secret: str = ""):
     check_secret(secret)
     body = await request.json()
+    print(f"[precheck] body: {body}", flush=True)
 
     product = body.get("product", {})
     options = body.get("options", [])
