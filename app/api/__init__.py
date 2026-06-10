@@ -206,6 +206,25 @@ async def fix_options():
                 errors.append({"ggsel_offer_id": offer.ggsel_offer_id, "error": str(e)})
         return {"updated": updated, "errors": errors}
 
+@app.get("/debug-precheck")
+async def debug_precheck():
+    from app.db import AsyncSessionLocal
+    from app.db.models import WebhookEvent
+    from sqlalchemy import select
+    from datetime import datetime, timedelta
+    since = datetime.utcnow() - timedelta(hours=24)
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(WebhookEvent)
+            .where(WebhookEvent.processed_at >= since)
+            .order_by(WebhookEvent.processed_at.desc())
+        )
+        events = result.scalars().all()
+    return [
+        {c.name: getattr(e, c.name) for c in WebhookEvent.__table__.columns}
+        for e in events
+    ]
+
 @app.get("/create-ak47-tasks")
 async def create_ak47_tasks():
     from app.db import AsyncSessionLocal
