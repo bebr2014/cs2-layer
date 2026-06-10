@@ -92,7 +92,25 @@ async def precheck(offer_id: int, request: Request, secret: str = ""):
                     xpanda_custom_id=str(id_i),
                 )
                 db.add(order)
-            await db.commit()
+
+        # Сохранить trade URL в WebhookEvent для последующего использования в notification
+        precheck_ext_id = f"precheck-{offer_id}"
+        result = await db.execute(
+            select(WebhookEvent).where(WebhookEvent.external_id == precheck_ext_id)
+        )
+        existing_event = result.scalar_one_or_none()
+        if existing_event:
+            existing_event.payload = {"trade_url": trade_url, "partner": partner, "token": token}
+            existing_event.processed_at = datetime.utcnow()
+        else:
+            db.add(WebhookEvent(
+                kind=WebhookKind.precheck,
+                external_id=precheck_ext_id,
+                payload={"trade_url": trade_url, "partner": partner, "token": token},
+                response_code=200,
+            ))
+
+        await db.commit()
 
     return {"error": None}
 
@@ -128,18 +146,18 @@ async def notification(offer_id: int, request: Request, secret: str = ""):
         if not offer:
             raise HTTPException(status_code=422, detail="Offer not found")
 
-        # Получить trade URL из ggsel order
-        # TODO: заменить на реальный вызов ggsel_office.get_order(id_i)
-        # order_data = await ggsel_office.get_order(id_i)
-        # trade_url = extract_trade_url(order_data)
-        trade_url = ""  # заглушка
-        partner = ""
-        token = ""
-
-        match = TRADE_URL_RE.match(trade_url) if trade_url else None
-        if match:
-            partner = match.group(1)
-            token = match.group(2)
+        # Взять trade URL из последнего precheck-события для этого оффера
+        precheck_result = await db.execute(
+            select(WebhookEvent).where(
+                WebhookEvent.kind == WebhookKind.precheck,
+                WebhookEvent.external_id == f"precheck-{offer_id}",
+            )
+        )
+        precheck_event = precheck_result.scalar_one_or_none()
+        precheck_payload = precheck_event.payload if precheck_event else {}
+        trade_url = precheck_payload.get("trade_url", "")
+        partner = precheck_payload.get("partner", "")
+        token = precheck_payload.get("token", "")
 
         # Сохранить заказ
         paid_at = datetime.fromisoformat(date_str) if date_str else datetime.utcnow()
